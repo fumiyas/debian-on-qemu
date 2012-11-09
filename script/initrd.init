@@ -1,0 +1,92 @@
+#!/bin/sh
+##
+## Linux initramfs: Simple /init script
+## Copyright (c) 2012 SATOH Fumiyasu @ OSS Technology Corp., Japan
+##
+## License: GNU General Public License version 3
+##
+
+set -u
+set -e
+umask 0022
+
+PS4="initramfs:$0:"
+info=": INFO ::"
+error=": ERROR ::"
+warning=": WARNING ::"
+
+trap '$error"Fallback to /bin/sh"; exec /bin/sh' EXIT
+set -x
+
+$info"Start"
+
+root=""
+init="/sbin/init"
+modules="ext4"
+
+$info"Creating basic directory tree in initramfs ..."
+mkdir -p /dev
+mkdir -p /sys
+mkdir -p /proc
+mkdir -p /tmp
+mkdir -p /mnt
+
+$info"Creating device files ..."
+if mount -t devtmpfs -o size=10M,mode=0755 udev /mnt; then
+  cp -rdRf /mnt/. /dev
+  umount /mnt
+fi
+
+$info"Mounting basic pseudo filesystems ..."
+mount -t sysfs -o nodev,noexec,nosuid sysfs /sys
+mount -t proc -o nodev,noexec,nosuid proc /proc
+#mkdir /dev/pts
+#mount -t devpts -o noexec,nosuid,gid=5,mode=0620 devpts /dev/pts || true
+
+$info"Parsing kernel command-line argument ..."
+for argv in $(cat /proc/cmdline); do
+  case "$argv" in
+  init=*)
+    init="${argv#init=}"
+    ;;
+  root=*)
+    root="${argv#root=}"
+    ;;
+  modules=*)
+    modules="${argv#modules=}"
+    ;;
+  esac
+done
+
+if [ -n "$root" ] && [ -z "${root##0x*}" ]; then
+  root_major=$(($root / 256))
+  root_minor=$(($root % 256))
+
+  $info"Creating root device (major=$root_major, minor=$root_minor) ..."
+  mknod /dev/root b "$root_major" "$root_minor"
+  root="/dev/root"
+fi
+
+$info"Loading kernel modules ..."
+for module in ${modules//,/ }; do
+  modprobe "$module" || true
+done
+
+if [ -n "$root" ]; then
+  $info"Mounting $root ..."
+  mount -o ro "$root" /mnt
+
+  if [ ! -x /mnt"$init" ]; then
+    $error"$init not found in $root"
+    exit 1
+  fi
+
+  $info"Switching root filesystem to $root and exec $init ..."
+  mount -n -o move /sys /mnt/sys
+  mount -n -o move /proc /mnt/proc
+  exec switch_root /mnt "$init"
+fi
+
+$warning"No root filesystem device specified"
+exit 1
+

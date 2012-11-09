@@ -1,0 +1,7 @@
+.PHONY: build clean
+
+build:: $(BUILD_TARGETS)
+
+clean::
+	rm -rf *.tmp *.stamp $(CLEAN_TARGETS)
+

@@ -1,0 +1,42 @@
+#!/bin/sh
+##
+## Debian GNU/Linux armhf on QEMU
+## Copyright (c) 2012 SATOH Fumiyasu @ OSS Technology Corp., Japan
+##
+## License: GNU General Public License version 3
+##
+
+set -x
+
+machine="vexpress-a9"
+memory="256" ## in MB
+keyboard_lang="ja"
+sd="rootfs.raw"
+vmlinuz="vmlinuz"
+initrd="initrd.cpio.gz"
+append="root=/dev/mmcblk0"
+
+if [ -n "${QEMU_DEBIAN_INIT-}" ]; then
+  append="$append init=$QEMU_DEBIAN_INIT"
+fi
+
+if :; then
+  set -- -nographic
+  append="$append console=ttyAMA0"
+else
+  set -- -serial stdio
+  append="$append console=tty0 console=ttyAMA0"
+fi
+
+qemu-system-arm \
+  "$@" \
+  -machine "$machine" \
+  ${cpu:+-cpu "$cpu"} \
+  ${memory:+-m "$memory"} \
+  ${keyboard_lang:+-k "$keyboard_lang"} \
+  -sd "$sd" \
+  -kernel "$vmlinuz" \
+  -initrd "$initrd" \
+  -append "$append" \
+  ;
+
