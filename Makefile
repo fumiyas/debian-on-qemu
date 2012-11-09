@@ -1,3 +1,11 @@
+#!/usr/bin/env make
+##
+## Helper scripts to construct Debian/GNU Linux env on QEMU
+## Copyright (c) 2012 SATOH Fumiyasu @ OSS Technology Corp., Japan
+##
+## License: GNU General Public License version 3
+##
+
 SOURCE_DIR=	.
 
 ## ======================================================================
