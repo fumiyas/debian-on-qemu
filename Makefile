@@ -10,13 +10,17 @@ SOURCE_DIR=	.
 
 ## ======================================================================
 
-DEB_HOSTNAME=	`uname -n`-$(DEB_CODENAME)-$(DEB_ARCH)
-DEB_ROOTFS_SIZE=10G
+include Makefile.config
 
-DEB_CODENAME=	wheezy
-DEB_ARCH=	armhf
-DEB_KERNEL=	linux-image-3.2.0-4-vexpress
-DEB_MIRROR=	http://ftp.jaist.ac.jp/debian
+ifeq ($(DEB_ARCH), armhf)
+  DEB_KERNEL_FLAVOR=	vexpress
+endif
+ifeq ($(DEB_ARCH), armel)
+  DEB_KERNEL_FLAVOR=	versatile
+endif
+ifndef DEB_KERNEL_FLAVOR
+  DEB_KERNEL_FLAVOR=	$(DEB_ARCH)
+endif
 
 ## ======================================================================
 
@@ -28,8 +32,8 @@ FAKEROOT_ENV=	fakeroot.env
 FAKEROOT=	fakeroot -i $(FAKEROOT_ENV) -s $(FAKEROOT_ENV)
 
 DEBOOTSTRAP=	debootstrap
-DEBOOTSTRAP_INCLUDE=	$(DEB_KERNEL),busybox-static
-DEBOOTSTRAP_EXCLUDE=	aptitude
+DEBOOTSTRAP_INCLUDE=	linux-image-$(DEB_KERNEL_FLAVOR),busybox-static
+DEBOOTSTRAP_EXCLUDE=	debconf-i18n,aptitude-common,aptitude
 DEBOOTSTRAP_TAR=rootfs-debs.tar
 
 BUILD_TARGETS=	$(ROOTFS) $(VMLINUZ) $(INITRD) rootfs.2nd.stamp
@@ -53,7 +57,7 @@ $(ROOTFS): rootfs.stamp
 
 rootfs.stamp: rootfs-debs.tar
 	rm -rf rootfs
-	$(FAKEROOT) $(DEBOOTSTRAP) --arch $(DEB_ARCH) --unpack-tarball=`pwd`/rootfs-debs.tar --foreign $(DEB_CODENAME) rootfs
+	$(FAKEROOT) $(DEBOOTSTRAP) --arch $(DEB_ARCH) --unpack-tarball=`pwd`/rootfs-debs.tar --exclude "$(DEBOOTSTRAP_EXCLUDE)" --foreign $(DEB_CODENAME) rootfs
 	$(FAKEROOT) cp script/debootstrap.2nd.sh rootfs/debootstrap.2nd
 	echo $(DEB_HOSTNAME) >rootfs/etc/hostname
 	echo 'ttyAMA0' >>rootfs/etc/securetty
@@ -82,7 +86,7 @@ initrd.stamp: rootfs.stamp
 	for c in sh cp rm mkdir sed mknod mount modprobe insmod switch_root; do \
 	  ln -s busybox initrd/bin/$$c; \
 	done
-	dpkg-deb --fsys-tarfile rootfs/var/cache/apt/archives/$(DEB_KERNEL)_*.deb \
+	dpkg-deb --fsys-tarfile rootfs/var/cache/apt/archives/linux-image-[0-9]*_*.deb \
 	  |tar -x -f - -C initrd --wildcards ./lib/modules './boot/vmlinuz-*'
 	depmod -b initrd `ls initrd/lib/modules`
 	touch $@
