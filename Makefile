@@ -68,7 +68,7 @@ $(DEBOOTSTRAP_TAR):
 	mv $@.tmp $@
 
 rootfs.2nd.stamp: $(VMLINUZ) $(INITRD) $(ROOTFS)
-	QEMU_DEBIAN_INIT=/debootstrap.2nd script/qemu-debian-armhf.init
+	QEMU_DEBIAN_INIT=/debootstrap.2nd script/qemu-debian.init
 	touch $@
 
 ## ======================================================================

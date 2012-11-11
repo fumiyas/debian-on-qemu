@@ -1,6 +1,6 @@
 #!/bin/sh
 ##
-## Debian GNU/Linux armhf on QEMU
+## Debian GNU/Linux system on QEMU
 ## Copyright (c) 2012 SATOH Fumiyasu @ OSS Technology Corp., Japan
 ##
 ## License: GNU General Public License version 3
