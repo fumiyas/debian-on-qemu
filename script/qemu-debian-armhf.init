@@ -13,7 +13,7 @@ memory="256" ## in MB
 keyboard_lang="ja"
 sd="rootfs.raw"
 vmlinuz="vmlinuz"
-initrd="initrd.cpio.gz"
+initrd="initrd.img"
 append="root=/dev/mmcblk0"
 
 if [ -n "${QEMU_DEBIAN_INIT-}" ]; then

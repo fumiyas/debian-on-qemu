@@ -1,6 +1,6 @@
 #!/usr/bin/env make
 ##
-## Helper scripts to construct Debian/GNU Linux env on QEMU
+## Bootstrap a Debian/GNU Linux system on QEMU
 ## Copyright (c) 2012 SATOH Fumiyasu @ OSS Technology Corp., Japan
 ##
 ## License: GNU General Public License version 3
@@ -26,7 +26,7 @@ endif
 
 ROOTFS=		rootfs.raw
 VMLINUZ=	vmlinuz
-INITRD=		initrd.cpio.gz
+INITRD=		initrd.img
 
 FAKEROOT_ENV=	fakeroot.env
 FAKEROOT=	fakeroot -i $(FAKEROOT_ENV) -s $(FAKEROOT_ENV)
@@ -34,7 +34,7 @@ FAKEROOT=	fakeroot -i $(FAKEROOT_ENV) -s $(FAKEROOT_ENV)
 DEBOOTSTRAP=	debootstrap
 DEBOOTSTRAP_INCLUDE=	linux-image-$(DEB_KERNEL_FLAVOR),busybox-static
 DEBOOTSTRAP_EXCLUDE=	debconf-i18n,aptitude-common,aptitude
-DEBOOTSTRAP_TAR=rootfs-debs.tar
+DEBOOTSTRAP_TAR=debootstrap-rootfs.tar
 
 BUILD_TARGETS=	$(ROOTFS) $(VMLINUZ) $(INITRD) rootfs.2nd.stamp
 CLEAN_TARGETS=	rootfs initrd $(DEBOOTSTRAP_TAR) $(FAKEROOT_ENV) $(BUILD_TARGETS)
@@ -55,15 +55,15 @@ $(ROOTFS): rootfs.stamp
 	)
 	mv $@.tmp $@
 
-rootfs.stamp: rootfs-debs.tar
+rootfs.stamp: $(DEBOOTSTRAP_TAR)
 	rm -rf rootfs
-	$(FAKEROOT) $(DEBOOTSTRAP) --arch $(DEB_ARCH) --unpack-tarball=`pwd`/rootfs-debs.tar --exclude "$(DEBOOTSTRAP_EXCLUDE)" --foreign $(DEB_CODENAME) rootfs
+	$(FAKEROOT) $(DEBOOTSTRAP) --arch $(DEB_ARCH) --unpack-tarball=`pwd`/$(DEBOOTSTRAP_TAR) --exclude "$(DEBOOTSTRAP_EXCLUDE)" --foreign $(DEB_CODENAME) rootfs
 	$(FAKEROOT) cp script/debootstrap.2nd.sh rootfs/debootstrap.2nd
 	echo $(DEB_HOSTNAME) >rootfs/etc/hostname
 	echo 'ttyAMA0' >>rootfs/etc/securetty
 	touch $@
 
-rootfs-debs.tar:
+$(DEBOOTSTRAP_TAR):
 	$(FAKEROOT) $(DEBOOTSTRAP) --arch $(DEB_ARCH) --make-tarball=$@.tmp --include "$(DEBOOTSTRAP_INCLUDE)" --exclude "$(DEBOOTSTRAP_EXCLUDE)" $(DEB_CODENAME) rootfs $(DEB_MIRROR)
 	mv $@.tmp $@
 
