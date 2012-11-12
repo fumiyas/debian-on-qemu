@@ -20,20 +20,23 @@ initddir=	$(prefix)/etc/init.d
 include Makefile.config
 
 ifeq ($(DEB_ARCH), armhf)
-  DEB_KERNEL_FLAVOR=	vexpress
+  DEB_KERNEL_FLAVOR:=	vexpress
 endif
 ifeq ($(DEB_ARCH), armel)
-  DEB_KERNEL_FLAVOR=	versatile
+  DEB_KERNEL_FLAVOR:=	versatile
 endif
 ifndef DEB_KERNEL_FLAVOR
-  DEB_KERNEL_FLAVOR=	$(DEB_ARCH)
+  DEB_KERNEL_FLAVOR:=	$(DEB_ARCH)
 endif
 
-ifeq ($(DEB_INCLUDE),)
-  DEB_INCLUDE=		dpkg ## dpkg is dummy
+ifndef DEB_INCLUDE
+  DEB_INCLUDE:=		dpkg ## dpkg is dummy
 endif
-ifeq ($(DEB_EXCLUDE),)
-  DEB_EXCLUDE=		_dummy_
+ifndef DEB_EXCLUDE
+  DEB_EXCLUDE:=		_dummy_
+endif
+ifndef DEB_TIMEZONE
+  DEB_TIMEZONE:=	$(shell cat /etc/timezone)
 endif
 
 ## ======================================================================
@@ -76,6 +79,7 @@ endif
 SUBST=	sed \
 	  -e 's|@NAME@|$(DEB_HOSTNAME)|g' \
 	  -e 's|@ARCH@|$(DEB_ARCH)|g' \
+	  -e 's|@TIMEZONE@|$(DEB_TIMEZONE)|g' \
 	  -e 's|@VAR@|$(var)|g' \
 	  ##
 
@@ -94,11 +98,11 @@ $(ROOTFS_IMAGE): $(BUILDDIR_STAMP) $(ROOTFS_STAMP)
 	qemu-img create -f raw $@.tmp $(DEB_ROOTFS_SIZE)
 	mkfs -t ext4 -F $@.tmp
 	tune2fs -c0 -i0 $@.tmp
-	mkdir -p mnt
+	mkdir -p $(BUILDDIR)/mnt
 	( \
-	  trap 'sudo umount mnt' EXIT; \
-	  sudo mount $@.tmp mnt; \
-	  $(FAKEROOT) tar cfC - $(ROOTFS) . |sudo tar xfC - mnt; \
+	  trap 'sudo umount $(BUILDDIR)/mnt' EXIT; \
+	  sudo mount $@.tmp $(BUILDDIR)/mnt; \
+	  $(FAKEROOT) tar cfC - $(ROOTFS) . |sudo tar xfC - $(BUILDDIR)/mnt; \
 	)
 	mv $@.tmp $@
 
@@ -113,10 +117,12 @@ $(ROOTFS_STAMP): $(BUILDDIR_STAMP) $(DEBOOTSTRAP_TAR)
 	    $(ROOTFS) \
 	  ;
 	$(FAKEROOT) \
-	  cp \
+	  $(SUBST) \
 	    script/debootstrap.2nd.sh \
-	    $(ROOTFS)/debootstrap/ \
+	    >$(ROOTFS)/debootstrap/debootstrap.2nd \
 	  ;
+	$(FAKEROOT) \
+	  chmod +x $(ROOTFS)/debootstrap/debootstrap.2nd
 	echo $(DEB_HOSTNAME) >$(ROOTFS)/etc/hostname
 	echo 'ttyAMA0' >>$(ROOTFS)/etc/securetty
 	touch $@
@@ -135,7 +141,7 @@ $(DEBOOTSTRAP_TAR): $(BUILDDIR_STAMP)
 $(BUILD_STAMP): $(BUILDDIR_STAMP) \
   $(KERNEL_IMAGE) $(INITRD_IMAGE) $(ROOTFS_IMAGE) $(INIT) $(INIT_DEFAULT)
 	env \
-	  QEMU_DEBIAN_INIT=/debootstrap/debootstrap.2nd.sh \
+	  QEMU_DEBIAN_INIT=/debootstrap/debootstrap.2nd \
 	  QEMU_DEBIAN_VAR_DIR=. \
 	  $(INIT) start
 	touch $@
