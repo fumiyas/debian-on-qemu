@@ -28,7 +28,5 @@ echo 'root:root' |chpasswd
 ## FIXME
 #sed -i 's/^UTC$/LOCAL/' /etc/adjtime
 
-rm "$0"
-
 exec /sbin/init
 

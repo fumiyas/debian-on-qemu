@@ -10,6 +10,13 @@ SOURCE_DIR=	.
 
 ## ======================================================================
 
+prefix=		/usr/local
+sysconfdir=	$(prefix)/etc
+localstatedir=	$(prefix)/var
+
+var=		$(localstatedir)
+initddir=	$(prefix)/etc/init.d
+
 include Makefile.config
 
 ifeq ($(DEB_ARCH), armhf)
@@ -27,6 +34,8 @@ endif
 ROOTFS=		rootfs.raw
 VMLINUZ=	vmlinuz
 INITRD=		initrd.img
+INIT=		qemu-debian-$(DEB_HOSTNAME).init
+INIT_DEFAULT=	qemu-debian-$(DEB_HOSTNAME).default
 
 FAKEROOT_ENV=	fakeroot.env
 FAKEROOT=	fakeroot -i $(FAKEROOT_ENV) -s $(FAKEROOT_ENV)
@@ -36,7 +45,13 @@ DEBOOTSTRAP_INCLUDE=	linux-image-$(DEB_KERNEL_FLAVOR),busybox-static
 DEBOOTSTRAP_EXCLUDE=	debconf-i18n,aptitude-common,aptitude
 DEBOOTSTRAP_TAR=debootstrap-rootfs.tar
 
-BUILD_TARGETS=	$(ROOTFS) $(VMLINUZ) $(INITRD) rootfs.2nd.stamp
+SUBST=	sed \
+	  -e 's|@NAME@|$(DEB_HOSTNAME)|g' \
+	  -e 's|@ARCH@|$(DEB_ARCH)|g' \
+	  -e 's|@VAR@|$(var)|g' \
+	  ##
+
+BUILD_TARGETS=	$(ROOTFS) $(VMLINUZ) $(INITRD) rootfs.2nd.stamp $(INIT) $(INIT_DEFAULT)
 CLEAN_TARGETS=	rootfs initrd $(DEBOOTSTRAP_TAR) $(FAKEROOT_ENV) $(BUILD_TARGETS)
 
 include $(SOURCE_DIR)/build/Makefile.common
@@ -58,7 +73,7 @@ $(ROOTFS): rootfs.stamp
 rootfs.stamp: $(DEBOOTSTRAP_TAR)
 	rm -rf rootfs
 	$(FAKEROOT) $(DEBOOTSTRAP) --arch $(DEB_ARCH) --unpack-tarball=`pwd`/$(DEBOOTSTRAP_TAR) --exclude "$(DEBOOTSTRAP_EXCLUDE)" --foreign $(DEB_CODENAME) rootfs
-	$(FAKEROOT) cp script/debootstrap.2nd.sh rootfs/debootstrap.2nd
+	$(FAKEROOT) cp script/debootstrap.2nd.sh rootfs/debootstrap/
 	echo $(DEB_HOSTNAME) >rootfs/etc/hostname
 	echo 'ttyAMA0' >>rootfs/etc/securetty
 	touch $@
@@ -67,8 +82,12 @@ $(DEBOOTSTRAP_TAR):
 	$(FAKEROOT) $(DEBOOTSTRAP) --arch $(DEB_ARCH) --make-tarball=$@.tmp --include "$(DEBOOTSTRAP_INCLUDE)" --exclude "$(DEBOOTSTRAP_EXCLUDE)" $(DEB_CODENAME) rootfs $(DEB_MIRROR)
 	mv $@.tmp $@
 
-rootfs.2nd.stamp: $(VMLINUZ) $(INITRD) $(ROOTFS)
-	QEMU_DEBIAN_INIT=/debootstrap.2nd script/qemu-debian.init
+rootfs.2nd.stamp: $(VMLINUZ) $(INITRD) $(ROOTFS) $(INIT) $(INIT_DEFAULT)
+	env \
+	  NAME=. \
+	  QEMU_DEBIAN_INIT=/debootstrap/debootstrap.2nd.sh \
+	  QEMU_DEBIAN_VAR_DIR=. \
+	  ./$(INIT) start
 	touch $@
 
 ## ======================================================================
@@ -96,4 +115,15 @@ initrd.stamp: rootfs.stamp
 $(VMLINUZ): $(INITRD)
 	mv initrd/boot/vmlinuz-* $@
 	touch $@
+
+## ======================================================================
+
+$(INIT): script/qemu-debian.init
+	$(SUBST) script/qemu-debian.init >$@.tmp
+	chmod +x $@.tmp
+	mv $@.tmp $@
+
+$(INIT_DEFAULT): script/qemu-debian.default
+	$(SUBST) script/qemu-debian.default >$@.tmp
+	mv $@.tmp $@
 

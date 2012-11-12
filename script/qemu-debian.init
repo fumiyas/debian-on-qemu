@@ -6,37 +6,60 @@
 ## License: GNU General Public License version 3
 ##
 
+set -u
+
+name="${QEMU_DEBIAN_NAME:-@NAME@}"
+arch="${QEMU_DEBIAN_ARCH:-@ARCH@}"
+
+var_dir="${QEMU_DEBIAN_VAR_DIR:-@VAR@/lib/qemu-debian}"
+
+if [ -f "@SYSCONFDIR@/default/qemu-debian-$name" ]; then
+  . "@SYSCONFDIR@/default/qemu-debian-$name"
+fi
+
+if [ -n "${NAME-}" ]; then
+  name="$NAME"
+fi
+
+memory="${QEMU_DEBIAN_ARCH:-${MEMORY-}}"
+cpu="${QEMU_DEBIAN_CPU:-${CPU-}}"
+keyboard_lang="${QEMU_DEBIAN_KEYBOARD_LANGUAGE:-${KEYBOARD_LANGUAGE-}}"
+kernel="${QEMU_DEBIAN_KERNEL:-${KERNEL-$var_dir/$name/vmlinuz}}"
+initrd="${QEMU_DEBIAN_INITRD:-${INITRD-$var_dir/$name/initrd.img}}"
+append="${QEMU_DEBIAN_APPEND:-${APPEND-}}"
+console="${QEMU_DEBIAN_CONSOLE:-${CONSOLE-ttyAMA0}}"
+root_fs="${QEMU_DEBIAN_ROOT_FS:-${ROOT_FS-$var_dir/$name/rootfs.raw}}"
+init="${QEMU_DEBIAN_INIT:-${INIT-}}"
+
+case "$arch" in
+arm*)
+  qemu_system="qemu-system-arm"
+  qemu_storage_option="-sd"
+  machine="vexpress-a9"
+  root_dev="/dev/mmcblk0"
+  ;;
+amd64)
+  qemu_system="qemu-system-x86_64"
+  qemu_storage_option="-hda"
+  machine="pc"
+  root_dev="/dev/sda"
+  ;;
+esac
+
+append="${console:+console=$console }$append"
+append="${root_dev:+root=$root_dev }$append"
+append="${init:+init=$init }$append"
+
 set -x
-
-machine="vexpress-a9"
-memory="256" ## in MB
-keyboard_lang="ja"
-sd="rootfs.raw"
-vmlinuz="vmlinuz"
-initrd="initrd.img"
-append="root=/dev/mmcblk0"
-
-if [ -n "${QEMU_DEBIAN_INIT-}" ]; then
-  append="$append init=$QEMU_DEBIAN_INIT"
-fi
-
-if :; then
-  set -- -nographic
-  append="$append console=ttyAMA0"
-else
-  set -- -serial stdio
-  append="$append console=tty0 console=ttyAMA0"
-fi
-
-qemu-system-arm \
-  "$@" \
-  -machine "$machine" \
+"$qemu_system" \
+  -nographic \
+  ${machine:+-machine "$machine"} \
   ${cpu:+-cpu "$cpu"} \
   ${memory:+-m "$memory"} \
   ${keyboard_lang:+-k "$keyboard_lang"} \
-  -sd "$sd" \
-  -kernel "$vmlinuz" \
-  -initrd "$initrd" \
-  -append "$append" \
+  ${root_fs:+"$qemu_storage_option" "$root_fs"} \
+  ${kernel:+-kernel "$kernel"} \
+  ${initrd:+-initrd "$initrd"} \
+  ${append:+-append "$append"} \
   ;
 
