@@ -31,6 +31,8 @@ console="${QEMU_DEBIAN_CONSOLE:-${CONSOLE-ttyAMA0}}"
 root_fs="${QEMU_DEBIAN_ROOT_FS:-${ROOT_FS-$var_dir/$name/rootfs.raw}}"
 init="${QEMU_DEBIAN_INIT:-${INIT-}}"
 
+qemu_opts="${QEMU_DEBIAN_QEMU_OPTIONS:-${QEMU_OPTIONS-}}"
+
 case "$arch" in
 arm*)
   qemu_system="qemu-system-arm"
@@ -50,7 +52,6 @@ append="${console:+console=$console }$append"
 append="${root_dev:+root=$root_dev }$append"
 append="${init:+init=$init }$append"
 
-set -x
 "$qemu_system" \
   -nographic \
   ${machine:+-machine "$machine"} \
@@ -61,5 +62,6 @@ set -x
   ${kernel:+-kernel "$kernel"} \
   ${initrd:+-initrd "$initrd"} \
   ${append:+-append "$append"} \
+  $qemu_options \
   ;
 
