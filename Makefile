@@ -38,6 +38,9 @@ endif
 ifndef DEB_TIMEZONE
   DEB_TIMEZONE:=	$(shell cat /etc/timezone)
 endif
+ifndef DEB_LANG
+  DEB_LANG:=		$(shell sed -n 's/^LANG="*\(.*\)"*/\1/p' /etc/default/locale)
+endif
 
 ## ======================================================================
 
@@ -80,6 +83,7 @@ SUBST=	sed \
 	  -e 's|@NAME@|$(DEB_HOSTNAME)|g' \
 	  -e 's|@ARCH@|$(DEB_ARCH)|g' \
 	  -e 's|@TIMEZONE@|$(DEB_TIMEZONE)|g' \
+	  -e 's|@LANG@|$(DEB_LANG)|g' \
 	  -e 's|@VAR@|$(var)|g' \
 	  ##
 

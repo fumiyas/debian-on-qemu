@@ -22,6 +22,16 @@ mount -o remount,rw /
 
 /debootstrap/debootstrap --second-stage
 
+if [ -f /etc/locale.gen ]; then
+  sed -i 's/^# *\(@LANG@ \)/\1/i' /etc/locale.gen
+fi
+if type locale-gen >/dev/null 2>&1; then
+  locale-gen
+fi
+if type update-locale >/dev/null 2>&1; then
+  update-locale LANG='@LANG@'
+fi
+
 echo '@TIMEZONE@' >/etc/timezone
 echo 'T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100' >>/etc/inittab
 echo 'root:root' |chpasswd
