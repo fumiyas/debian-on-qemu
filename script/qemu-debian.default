@@ -1,0 +1,7 @@
+MEMORY="256"
+CPU=""
+KEYBOARD_LANG="ja"
+APPEND=""
+CONSOLE="ttyAMA0"
+INIT=""
+

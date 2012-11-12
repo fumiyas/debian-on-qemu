@@ -29,21 +29,49 @@ ifndef DEB_KERNEL_FLAVOR
   DEB_KERNEL_FLAVOR=	$(DEB_ARCH)
 endif
 
+ifeq ($(DEB_INCLUDE),)
+  DEB_INCLUDE=		dpkg ## dpkg is dummy
+endif
+ifeq ($(DEB_EXCLUDE),)
+  DEB_EXCLUDE=		_dummy_
+endif
+
 ## ======================================================================
 
-ROOTFS=		rootfs.raw
-VMLINUZ=	vmlinuz
-INITRD=		initrd.img
-INIT=		qemu-debian-$(DEB_HOSTNAME).init
-INIT_DEFAULT=	qemu-debian-$(DEB_HOSTNAME).default
+BUILDDIR=	$(DEB_HOSTNAME)
+BUILDDIR_STAMP=	$(BUILDDIR).stamp
+BUILD_STAMP=	$(BUILDDIR)/build.stamp
 
-FAKEROOT_ENV=	fakeroot.env
+ROOTFS=		$(BUILDDIR)/rootfs
+ROOTFS_STAMP=	$(ROOTFS).stamp
+ROOTFS_IMAGE=	$(BUILDDIR)/rootfs.raw
+KERNEL_IMAGE=	$(BUILDDIR)/vmlinuz
+INITRD=		$(BUILDDIR)/initrd
+INITRD_STAMP=	$(INITRD).stamp
+INITRD_IMAGE=	$(BUILDDIR)/initrd.img
+INIT=		$(BUILDDIR)/qemu-debian-$(DEB_HOSTNAME).init
+INIT_DEFAULT=	$(BUILDDIR)/qemu-debian-$(DEB_HOSTNAME).default
+
+BUILD_TARGETS=	$(BUILD_STAMP)
+CLEAN_TARGETS=	$(BUILDDIR)
+
+## ----------------------------------------------------------------------
+
+FAKEROOT_ENV=	$(BUILDDIR)/fakeroot.env
 FAKEROOT=	fakeroot -i $(FAKEROOT_ENV) -s $(FAKEROOT_ENV)
 
+DEBOOTSTRAP_TAR=$(BUILDDIR)/debootstrap-rootfs.tar
+DEBOOTSTRAP_INCLUDE= \
+		linux-image-$(DEB_KERNEL_FLAVOR),busybox-static,$(DEB_INCLUDE)
+DEBOOTSTRAP_EXCLUDE= \
+		$(DEB_EXCLUDE)
 DEBOOTSTRAP=	debootstrap
-DEBOOTSTRAP_INCLUDE=	linux-image-$(DEB_KERNEL_FLAVOR),busybox-static
-DEBOOTSTRAP_EXCLUDE=	debconf-i18n,aptitude-common,aptitude
-DEBOOTSTRAP_TAR=debootstrap-rootfs.tar
+ifneq ($(DEBOOTSTRAP_INCLUDE),)
+  DEBOOTSTRAP+=	  --include $(DEBOOTSTRAP_INCLUDE)
+endif
+ifneq ($(DEBOOTSTRAP_EXCLUDE),)
+  DEBOOTSTRAP+=	  --exclude $(DEBOOTSTRAP_EXCLUDE)
+endif
 
 SUBST=	sed \
 	  -e 's|@NAME@|$(DEB_HOSTNAME)|g' \
@@ -51,14 +79,18 @@ SUBST=	sed \
 	  -e 's|@VAR@|$(var)|g' \
 	  ##
 
-BUILD_TARGETS=	$(ROOTFS) $(VMLINUZ) $(INITRD) rootfs.2nd.stamp $(INIT) $(INIT_DEFAULT)
-CLEAN_TARGETS=	rootfs initrd $(DEBOOTSTRAP_TAR) $(FAKEROOT_ENV) $(BUILD_TARGETS)
-
 include $(SOURCE_DIR)/build/Makefile.common
 
 ## ======================================================================
 
-$(ROOTFS): rootfs.stamp
+$(BUILDDIR_STAMP):
+	mkdir $(BUILDDIR)
+	touch $(FAKEROOT_ENV)
+	touch $@
+
+## ======================================================================
+
+$(ROOTFS_IMAGE): $(BUILDDIR_STAMP) $(ROOTFS_STAMP)
 	qemu-img create -f raw $@.tmp $(DEB_ROOTFS_SIZE)
 	mkfs -t ext4 -F $@.tmp
 	tune2fs -c0 -i0 $@.tmp
@@ -66,64 +98,85 @@ $(ROOTFS): rootfs.stamp
 	( \
 	  trap 'sudo umount mnt' EXIT; \
 	  sudo mount $@.tmp mnt; \
-	  $(FAKEROOT) tar cfC - rootfs . |sudo tar xfC - mnt; \
+	  $(FAKEROOT) tar cfC - $(ROOTFS) . |sudo tar xfC - mnt; \
 	)
 	mv $@.tmp $@
 
-rootfs.stamp: $(DEBOOTSTRAP_TAR)
-	rm -rf rootfs
-	$(FAKEROOT) $(DEBOOTSTRAP) --arch $(DEB_ARCH) --unpack-tarball=`pwd`/$(DEBOOTSTRAP_TAR) --exclude "$(DEBOOTSTRAP_EXCLUDE)" --foreign $(DEB_CODENAME) rootfs
-	$(FAKEROOT) cp script/debootstrap.2nd.sh rootfs/debootstrap/
-	echo $(DEB_HOSTNAME) >rootfs/etc/hostname
-	echo 'ttyAMA0' >>rootfs/etc/securetty
+$(ROOTFS_STAMP): $(BUILDDIR_STAMP) $(DEBOOTSTRAP_TAR)
+	rm -rf $(ROOTFS)
+	$(FAKEROOT) \
+	  $(DEBOOTSTRAP) \
+	    --arch $(DEB_ARCH) \
+	    --unpack-tarball=`pwd`/$(DEBOOTSTRAP_TAR) \
+	    --foreign \
+	    $(DEB_CODENAME) \
+	    $(ROOTFS) \
+	  ;
+	$(FAKEROOT) \
+	  cp \
+	    script/debootstrap.2nd.sh \
+	    $(ROOTFS)/debootstrap/ \
+	  ;
+	echo $(DEB_HOSTNAME) >$(ROOTFS)/etc/hostname
+	echo 'ttyAMA0' >>$(ROOTFS)/etc/securetty
 	touch $@
 
-$(DEBOOTSTRAP_TAR):
-	$(FAKEROOT) $(DEBOOTSTRAP) --arch $(DEB_ARCH) --make-tarball=$@.tmp --include "$(DEBOOTSTRAP_INCLUDE)" --exclude "$(DEBOOTSTRAP_EXCLUDE)" $(DEB_CODENAME) rootfs $(DEB_MIRROR)
+$(DEBOOTSTRAP_TAR): $(BUILDDIR_STAMP)
+	$(FAKEROOT) \
+	  $(DEBOOTSTRAP) \
+	    --arch $(DEB_ARCH) \
+	    --make-tarball=$@.tmp \
+	    $(DEB_CODENAME) \
+	    $(ROOTFS) \
+	    $(DEB_MIRROR) \
+	  ;
 	mv $@.tmp $@
 
-rootfs.2nd.stamp: $(VMLINUZ) $(INITRD) $(ROOTFS) $(INIT) $(INIT_DEFAULT)
+$(BUILD_STAMP): $(BUILDDIR_STAMP) \
+  $(KERNEL_IMAGE) $(INITRD_IMAGE) $(ROOTFS_IMAGE) $(INIT) $(INIT_DEFAULT)
 	env \
-	  NAME=. \
 	  QEMU_DEBIAN_INIT=/debootstrap/debootstrap.2nd.sh \
 	  QEMU_DEBIAN_VAR_DIR=. \
-	  ./$(INIT) start
+	  $(INIT) start
 	touch $@
 
 ## ======================================================================
 
-$(INITRD): initrd.stamp
-	(cd initrd && find . |cpio -o -H newc --owner=0:0 |gzip -9) >$@.tmp
+$(INITRD_IMAGE): $(BUILDDIR_STAMP) $(INITRD_STAMP)
+	(cd $(INITRD) && find . |cpio -o -H newc --owner=0:0 |gzip -9) >$@.tmp
 	mv $@.tmp $@
 
-initrd.stamp: rootfs.stamp
-	rm -rf initrd
-	mkdir -p -m 0755 initrd/bin
-	cp -p script/initrd.init initrd/init
-	dpkg-deb --fsys-tarfile rootfs/var/cache/apt/archives/busybox-static_*.deb \
-	  |tar xfC - initrd ./bin/busybox
+$(INITRD_STAMP): $(BUILDDIR_STAMP) $(ROOTFS_STAMP)
+	rm -rf $(INITRD)
+	mkdir -p -m 0755 $(INITRD)/bin
+	cp -p script/initrd.init $(INITRD)/init
+	dpkg-deb \
+	  --fsys-tarfile $(ROOTFS)/var/cache/apt/archives/busybox-static_*.deb \
+	  |tar xfC - $(INITRD) ./bin/busybox \
+	  ;
 	for c in sh cp rm mkdir sed mknod mount modprobe insmod switch_root; do \
-	  ln -s busybox initrd/bin/$$c; \
+	  ln -s busybox $(INITRD)/bin/$$c; \
 	done
-	dpkg-deb --fsys-tarfile rootfs/var/cache/apt/archives/linux-image-[0-9]*_*.deb \
-	  |tar -x -f - -C initrd --wildcards ./lib/modules './boot/vmlinuz-*'
-	depmod -b initrd `ls initrd/lib/modules`
+	dpkg-deb \
+	    --fsys-tarfile $(ROOTFS)/var/cache/apt/archives/linux-image-[0-9]*_*.deb \
+	  |tar -x -f - -C $(INITRD) --wildcards ./lib/modules './boot/vmlinuz-*'
+	depmod -b $(INITRD) `ls $(INITRD)/lib/modules`
 	touch $@
 
 ## ======================================================================
 
-$(VMLINUZ): $(INITRD)
-	mv initrd/boot/vmlinuz-* $@
+$(KERNEL_IMAGE): $(BUILDDIR_STAMP) $(INITRD_IMAGE)
+	mv $(INITRD)/boot/vmlinuz-* $@
 	touch $@
 
 ## ======================================================================
 
-$(INIT): script/qemu-debian.init
+$(INIT): $(BUILDDIR_STAMP) script/qemu-debian.init
 	$(SUBST) script/qemu-debian.init >$@.tmp
 	chmod +x $@.tmp
 	mv $@.tmp $@
 
-$(INIT_DEFAULT): script/qemu-debian.default
+$(INIT_DEFAULT): $(BUILDDIR_STAMP) script/qemu-debian.default
 	$(SUBST) script/qemu-debian.default >$@.tmp
 	mv $@.tmp $@
 
