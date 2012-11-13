@@ -3,6 +3,8 @@ Bootstrap a Debian/GNU Linux system on QEMU
 
   * Copyright (c) 2012 SATOH Fumiyasu @ OSS Technology Corp., Japan
   * License: GNU General Public License version 3
+  * URL: <https://github.com/fumiyas/debian-on-qemu>
+  * Twitter: <https://twitter.com/satoh_fumiyasu>
 
 What's this?
 ----------------------------------------------------------------------
