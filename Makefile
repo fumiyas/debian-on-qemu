@@ -45,16 +45,20 @@ endif
 ## ======================================================================
 
 BUILDDIR=	$(DEB_HOSTNAME)
-BUILDDIR_STAMP=	$(BUILDDIR).stamp
+BUILDDIR_STAMP=	$(BUILDDIR)/builddir.stamp
 BUILD_STAMP=	$(BUILDDIR)/build.stamp
 
 ROOTFS=		$(BUILDDIR)/rootfs
 ROOTFS_STAMP=	$(ROOTFS).stamp
 ROOTFS_IMAGE=	$(BUILDDIR)/rootfs.raw
+
 KERNEL_IMAGE=	$(BUILDDIR)/vmlinuz
+
 INITRD=		$(BUILDDIR)/initrd
 INITRD_STAMP=	$(INITRD).stamp
 INITRD_IMAGE=	$(BUILDDIR)/initrd.img
+BUSYBOX_CMDS=   sh cp rm mkdir sed sleep mknod mount modprobe insmod switch_root
+
 INIT=		$(BUILDDIR)/qemu-debian-$(DEB_HOSTNAME).init
 INIT_DEFAULT=	$(BUILDDIR)/qemu-debian-$(DEB_HOSTNAME).default
 
@@ -110,7 +114,7 @@ $(ROOTFS_IMAGE): $(BUILDDIR_STAMP) $(ROOTFS_STAMP)
 	)
 	mv $@.tmp $@
 
-$(ROOTFS_STAMP): $(BUILDDIR_STAMP) $(DEBOOTSTRAP_TAR)
+$(ROOTFS_STAMP): $(BUILDDIR_STAMP) $(DEBOOTSTRAP_TAR) script/debootstrap.2nd.sh
 	rm -rf $(ROOTFS)
 	$(FAKEROOT) \
 	  $(DEBOOTSTRAP) \
@@ -156,7 +160,7 @@ $(INITRD_IMAGE): $(BUILDDIR_STAMP) $(INITRD_STAMP)
 	(cd $(INITRD) && find . |cpio -o -H newc --owner=0:0 |gzip -9) >$@.tmp
 	mv $@.tmp $@
 
-$(INITRD_STAMP): $(BUILDDIR_STAMP) $(ROOTFS_STAMP)
+$(INITRD_STAMP): $(BUILDDIR_STAMP) $(ROOTFS_STAMP) script/initrd.init
 	rm -rf $(INITRD)
 	mkdir -p -m 0755 $(INITRD)/bin
 	cp -p script/initrd.init $(INITRD)/init
@@ -164,7 +168,7 @@ $(INITRD_STAMP): $(BUILDDIR_STAMP) $(ROOTFS_STAMP)
 	  --fsys-tarfile $(ROOTFS)/var/cache/apt/archives/busybox-static_*.deb \
 	  |tar xfC - $(INITRD) ./bin/busybox \
 	  ;
-	for c in sh cp rm mkdir sed sleep mknod mount modprobe insmod switch_root; do \
+	for c in $(BUSYBOX_CMDS); do \
 	  ln -s busybox $(INITRD)/bin/$$c; \
 	done
 	dpkg-deb \
