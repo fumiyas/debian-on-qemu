@@ -120,7 +120,7 @@ $(ROOTFS_IMAGE): $(BUILDDIR_STAMP) $(ROOTFS_STAMP)
 	tune2fs -c0 -i0 $@.tmp
 	mkdir -p $(BUILDDIR)/mnt
 	( \
-	  trap 'sudo umount $(BUILDDIR)/mnt' EXIT; \
+	  trap 'sudo umount $(BUILDDIR)/mnt' EXIT INT; \
 	  sudo mount $@.tmp $(BUILDDIR)/mnt; \
 	  $(FAKEROOT) tar cfC - $(ROOTFS) . |sudo tar xfC - $(BUILDDIR)/mnt; \
 	)
