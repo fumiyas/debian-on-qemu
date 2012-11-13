@@ -66,6 +66,10 @@ for module in ${modules//,/ }; do
   modprobe "$module" || true
 done
 
+if [ -n "$rootdelay" ]; then
+  sleep "$rootdelay"
+fi
+
 $info"Creating device files ..."
 if mount -t devtmpfs -o size=10M,mode=0755 udev /mnt; then
   cp -rdRf /mnt/. /dev
@@ -79,10 +83,6 @@ if [ -n "$root" ] && [ -z "${root##0x*}" ]; then
   $info"Creating root device (major=$root_major, minor=$root_minor) ..."
   mknod /dev/root b "$root_major" "$root_minor"
   root="/dev/root"
-fi
-
-if [ -n "$rootdelay" ]; then
-  sleep "$rootdelay"
 fi
 
 if [ -n "$root" ]; then
