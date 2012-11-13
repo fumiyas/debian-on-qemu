@@ -34,11 +34,18 @@ init="${QEMU_DEBIAN_INIT:-${INIT-}}"
 qemu_opts="${QEMU_DEBIAN_QEMU_OPTIONS:-${QEMU_OPTIONS-}}"
 
 case "$arch" in
-arm*)
+armhf)
   qemu_system="qemu-system-arm"
   qemu_storage_option="-sd"
   machine="vexpress-a9"
   root_dev="/dev/mmcblk0"
+  ;;
+armel)
+  qemu_system="qemu-system-arm"
+  qemu_storage_option="-hda"
+  machine="versatilepb"
+  root_dev="/dev/sda"
+  append="$append modules=sym53c8xx,sd_mod,ext4 rootdelay=5"
   ;;
 amd64)
   qemu_system="qemu-system-x86_64"
