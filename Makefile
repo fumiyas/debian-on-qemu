@@ -64,15 +64,18 @@ KERNEL_IMAGE=	$(BUILDDIR)/vmlinuz
 INITRD=		$(BUILDDIR)/initrd
 INITRD_STAMP=	$(INITRD).stamp
 INITRD_IMAGE=	$(BUILDDIR)/initrd.img
+
 BUSYBOX_CMDS=   sh cp rm mkdir sed sleep mknod mount modprobe insmod switch_root
 
 INIT=		$(BUILDDIR)/qemu-debian-$(DEB_HOSTNAME).init
 INIT_DEFAULT=	$(BUILDDIR)/qemu-debian-$(DEB_HOSTNAME).default
 
-BUILD_TARGETS=	$(BUILD_STAMP)
-CLEAN_TARGETS=	$(BUILDDIR)
+SCREENRC=	$(BUILDDIR)/screenrc
 
 ## ----------------------------------------------------------------------
+
+BUILD_TARGETS=	$(BUILD_STAMP)
+CLEAN_TARGETS=	$(BUILDDIR)
 
 FAKEROOT_ENV=	$(BUILDDIR)/fakeroot.env
 FAKEROOT=	fakeroot -i $(FAKEROOT_ENV) -s $(FAKEROOT_ENV)
@@ -96,6 +99,7 @@ SUBST=	sed \
 	  -e 's|@TIMEZONE@|$(DEB_TIMEZONE)|g' \
 	  -e 's|@LANG@|$(DEB_LANG)|g' \
 	  -e 's|@SERIAL_DEVICE@|$(QEMU_SERIAL_DEVICE)|g' \
+	  -e 's|@SYSCONFDIR@|$(sysconfdir)|g' \
 	  -e 's|@VAR@|$(var)|g' \
 	  ##
 
@@ -156,11 +160,26 @@ $(DEBOOTSTRAP_TAR): $(BUILDDIR_STAMP)
 	mv $@.tmp $@
 
 $(BUILD_STAMP): $(BUILDDIR_STAMP) \
-  $(KERNEL_IMAGE) $(INITRD_IMAGE) $(ROOTFS_IMAGE) $(INIT) $(INIT_DEFAULT)
-	env \
+  $(KERNEL_IMAGE) $(INITRD_IMAGE) $(ROOTFS_IMAGE) \
+  $(INIT) $(INIT_DEFAULT) $(SCREENRC)
+	echo env \
 	  QEMU_DEBIAN_INIT=/debootstrap/debootstrap.2nd \
 	  QEMU_DEBIAN_VAR_DIR=. \
 	  $(INIT) start
+	tail -f -n +1 $(BUILDDIR)/screen.log \
+	  |while IFS= read -r line; do \
+	  echo "debootstrap.2nd:$$line"; \
+	    if [ "$${line%:*}" = "$(DEB_HOSTNAME) login" ]; then \
+	      pkill --parent $$$$ tail; \
+	      break; \
+	    fi; \
+	  done
+	@echo "debootstrap.2nd completed"; echo
+	@echo "NOTE: Login user 'root' with password 'root' and exit by 'poweroff'!"
+	@echo
+	@env \
+	  QEMU_DEBIAN_VAR_DIR=. \
+	  $(INIT) attach
 	touch $@
 
 ## ======================================================================
@@ -201,5 +220,9 @@ $(INIT): $(BUILDDIR_STAMP) script/qemu-debian.init
 
 $(INIT_DEFAULT): $(BUILDDIR_STAMP) script/qemu-debian.default
 	$(SUBST) script/qemu-debian.default >$@.tmp
+	mv $@.tmp $@
+
+$(SCREENRC): script/screenrc
+	$(SUBST) script/screenrc >$@.tmp
 	mv $@.tmp $@
 

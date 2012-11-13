@@ -11,8 +11,6 @@ set -u
 name="${QEMU_DEBIAN_NAME:-@NAME@}"
 arch="${QEMU_DEBIAN_ARCH:-@ARCH@}"
 
-var_dir="${QEMU_DEBIAN_VAR_DIR:-@VAR@/lib/qemu-debian}"
-
 if [ -f "@SYSCONFDIR@/default/qemu-debian-$name" ]; then
   . "@SYSCONFDIR@/default/qemu-debian-$name"
 fi
@@ -21,14 +19,20 @@ if [ -n "${NAME-}" ]; then
   name="$NAME"
 fi
 
+qemu_env="${QEMU_DEBIAN_VAR_DIR:-@VAR@/lib/qemu-debian}/$name"
+qemu_pid_file="${QEMU_DEBIAN_QEMU_PID:-$qemu_env/qemu.pid}"
+
+screen_rc="${QEMU_DEBIAN_SCREENRC:-$qemu_env/screenrc}"
+screen_log="${QEMU_DEBIAN_SCREEN_LOG:-$qemu_env/screen.log}"
+
 memory="${QEMU_DEBIAN_ARCH:-${MEMORY-256}}"
 cpu="${QEMU_DEBIAN_CPU:-${CPU-}}"
 keyboard_lang="${QEMU_DEBIAN_KEYBOARD_LANGUAGE:-${KEYBOARD_LANGUAGE-}}"
-kernel="${QEMU_DEBIAN_KERNEL:-${KERNEL-$var_dir/$name/vmlinuz}}"
-initrd="${QEMU_DEBIAN_INITRD:-${INITRD-$var_dir/$name/initrd.img}}"
+kernel="${QEMU_DEBIAN_KERNEL:-${KERNEL-$qemu_env/vmlinuz}}"
+initrd="${QEMU_DEBIAN_INITRD:-${INITRD-$qemu_env/initrd.img}}"
 append="${QEMU_DEBIAN_APPEND:-${APPEND-}}"
 console="${QEMU_DEBIAN_CONSOLE:-${CONSOLE-}}"
-root_fs="${QEMU_DEBIAN_ROOT_FS:-${ROOT_FS-$var_dir/$name/rootfs.raw}}"
+root_fs="${QEMU_DEBIAN_ROOT_FS:-${ROOT_FS-$qemu_env/rootfs.raw}}"
 init="${QEMU_DEBIAN_INIT:-${INIT-}}"
 
 qemu_opts="${QEMU_DEBIAN_QEMU_OPTIONS:-${QEMU_OPTIONS-}}"
@@ -63,16 +67,108 @@ append="${console:+console=$console }$append"
 append="${root_dev:+root=$root_dev }$append"
 append="${init:+init=$init }$append"
 
-"$qemu_system" \
-  -nographic \
-  ${machine:+-machine "$machine"} \
-  ${cpu:+-cpu "$cpu"} \
-  ${memory:+-m "$memory"} \
-  ${keyboard_lang:+-k "$keyboard_lang"} \
-  ${root_fs:+"$qemu_storage_option" "$root_fs"} \
-  ${kernel:+-kernel "$kernel"} \
-  ${initrd:+-initrd "$initrd"} \
-  ${append:+-append "$append"} \
-  $qemu_opts \
-  ;
+## ======================================================================
+
+sv_pid()
+{
+  ## No PID file
+  [ -f "$qemu_pid_file" ] || return 0
+
+  local qemu_pid pid
+  qemu_pid=$(cat "$qemu_pid_file") || exit 1
+  for pid in $(pidof "$qemu_system"); do
+    if [ x"$qemu_pid" = x"$pid" ]; then
+      echo "$qemu_pid"
+      return 0
+    fi
+  done
+
+  ## Staled PID file
+  rm "$qemu_pid_file"
+  return 0
+}
+
+sv_start()
+{
+  echo "Starting QEMU for $name ..."
+
+  local pid
+  pid=$(sv_pid) || exit $?
+  [ -n "$pid" ] && { echo "Already running"; return 1; }
+
+  [ -f "$screen_log" ] && mv "$screen_log" "$screen_log.old"
+  date '+%Y-%m-%d %H:%M:%S' >"$screen_log"
+
+  env \
+    QEMU_DEBIAN_SCREEN_LOG="$screen_log" \
+  screen \
+    -S "$name" \
+    -dm \
+    -c "$screen_rc" \
+    -L \
+  "$qemu_system" \
+    -pidfile "$qemu_pid_file" \
+    -nographic \
+    ${machine:+-machine "$machine"} \
+    ${cpu:+-cpu "$cpu"} \
+    ${memory:+-m "$memory"} \
+    ${keyboard_lang:+-k "$keyboard_lang"} \
+    ${root_fs:+"$qemu_storage_option" "$root_fs"} \
+    ${kernel:+-kernel "$kernel"} \
+    ${initrd:+-initrd "$initrd"} \
+    ${append:+-append "$append"} \
+    $qemu_opts \
+    || return 1
+
+  echo "QEMU for $name started."
+
+  return 0
+}
+
+sv_stop()
+{
+  echo "Cannot stop (not implemented)"
+  return 1
+}
+
+sv_attach()
+{
+  echo "Attaching QEMU for $name via screen session ..."
+
+  local pid
+  pid=$(sv_pid) || exit $?
+  [ -z "$pid" ] && { echo "Not running"; return 1; }
+
+  echo "You can detach from the session by typing the key sequence:"
+  echo "Enter key, Ctrl-z and 'd'"
+  echo
+  echo -n "Type Enter key to continue ..."
+  read
+
+  screen -r "$name" -c "$screen_rc"
+}
+
+
+## ======================================================================
+
+case "${1:-usage}" in
+start)
+  sv_start || exit $?
+  ;;
+stop)
+  sv_stop || exit $?
+  ;;
+attach)
+  sv_attach || exit $?
+  ;;
+pid)
+  sv_pid || exit $?
+  ;;
+*)
+  echo "Usage: $0 {start|stop|attach|pid}"
+  exit 1
+  ;;
+esac
+
+exit 0
 
