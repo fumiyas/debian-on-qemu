@@ -21,12 +21,15 @@ include Makefile.config
 
 ifeq ($(DEB_ARCH), armhf)
   DEB_KERNEL_FLAVOR:=	vexpress
+  QEMU_SERIAL_DEVICE:=	ttyAMA0
 endif
 ifeq ($(DEB_ARCH), armel)
   DEB_KERNEL_FLAVOR:=	versatile
+  QEMU_SERIAL_DEVICE:=	ttyAMA0
 endif
 ifndef DEB_KERNEL_FLAVOR
   DEB_KERNEL_FLAVOR:=	$(DEB_ARCH)
+  QEMU_SERIAL_DEVICE:=	ttyS0
 endif
 
 ifndef DEB_INCLUDE
@@ -88,6 +91,7 @@ SUBST=	sed \
 	  -e 's|@ARCH@|$(DEB_ARCH)|g' \
 	  -e 's|@TIMEZONE@|$(DEB_TIMEZONE)|g' \
 	  -e 's|@LANG@|$(DEB_LANG)|g' \
+	  -e 's|@SERIAL_DEVICE@|$(QEMU_SERIAL_DEVICE)|g' \
 	  -e 's|@VAR@|$(var)|g' \
 	  ##
 
@@ -97,7 +101,6 @@ include $(SOURCE_DIR)/build/Makefile.common
 
 $(BUILDDIR_STAMP):
 	mkdir $(BUILDDIR)
-	touch $(FAKEROOT_ENV)
 	touch $@
 
 ## ======================================================================
@@ -132,10 +135,11 @@ $(ROOTFS_STAMP): $(BUILDDIR_STAMP) $(DEBOOTSTRAP_TAR) script/debootstrap.2nd.sh
 	$(FAKEROOT) \
 	  chmod +x $(ROOTFS)/debootstrap/debootstrap.2nd
 	echo $(DEB_HOSTNAME) >$(ROOTFS)/etc/hostname
-	echo 'ttyAMA0' >>$(ROOTFS)/etc/securetty
+	echo '$(QEMU_SERIAL_DEVICE)' >>$(ROOTFS)/etc/securetty
 	touch $@
 
 $(DEBOOTSTRAP_TAR): $(BUILDDIR_STAMP)
+	: >$(FAKEROOT_ENV)
 	$(FAKEROOT) \
 	  $(DEBOOTSTRAP) \
 	    --arch $(DEB_ARCH) \

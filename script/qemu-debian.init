@@ -21,13 +21,13 @@ if [ -n "${NAME-}" ]; then
   name="$NAME"
 fi
 
-memory="${QEMU_DEBIAN_ARCH:-${MEMORY-}}"
+memory="${QEMU_DEBIAN_ARCH:-${MEMORY-256}}"
 cpu="${QEMU_DEBIAN_CPU:-${CPU-}}"
 keyboard_lang="${QEMU_DEBIAN_KEYBOARD_LANGUAGE:-${KEYBOARD_LANGUAGE-}}"
 kernel="${QEMU_DEBIAN_KERNEL:-${KERNEL-$var_dir/$name/vmlinuz}}"
 initrd="${QEMU_DEBIAN_INITRD:-${INITRD-$var_dir/$name/initrd.img}}"
 append="${QEMU_DEBIAN_APPEND:-${APPEND-}}"
-console="${QEMU_DEBIAN_CONSOLE:-${CONSOLE-ttyAMA0}}"
+console="${QEMU_DEBIAN_CONSOLE:-${CONSOLE-}}"
 root_fs="${QEMU_DEBIAN_ROOT_FS:-${ROOT_FS-$var_dir/$name/rootfs.raw}}"
 init="${QEMU_DEBIAN_INIT:-${INIT-}}"
 
@@ -39,6 +39,7 @@ armhf)
   qemu_storage_option="-sd"
   machine="vexpress-a9"
   root_dev="/dev/mmcblk0"
+  [ -z "$console" ] && console="ttyAMA0"
   ;;
 armel)
   qemu_system="qemu-system-arm"
@@ -46,12 +47,15 @@ armel)
   machine="versatilepb"
   root_dev="/dev/sda"
   append="$append modules=sym53c8xx,sd_mod,ext4 rootdelay=5"
+  [ -z "$console" ] && console="ttyAMA0"
   ;;
 amd64)
   qemu_system="qemu-system-x86_64"
   qemu_storage_option="-hda"
   machine="pc"
   root_dev="/dev/sda"
+  append="$append modules=ata_piix,sd_mod,ext4 rootdelay=5"
+  [ -z "$console" ] && console="ttyS0"
   ;;
 esac
 
