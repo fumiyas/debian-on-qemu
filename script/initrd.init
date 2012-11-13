@@ -21,6 +21,7 @@ set -x
 $info"Start"
 
 root=""
+rootdelay=""
 init="/sbin/init"
 modules="ext4"
 
@@ -31,12 +32,6 @@ mkdir -p /proc
 mkdir -p /tmp
 mkdir -p /mnt
 
-$info"Creating device files ..."
-if mount -t devtmpfs -o size=10M,mode=0755 udev /mnt; then
-  cp -rdRf /mnt/. /dev
-  umount /mnt
-fi
-
 $info"Mounting basic pseudo filesystems ..."
 mount -t sysfs -o nodev,noexec,nosuid sysfs /sys
 mount -t proc -o nodev,noexec,nosuid proc /proc
@@ -46,17 +41,36 @@ mount -t proc -o nodev,noexec,nosuid proc /proc
 $info"Parsing kernel command-line argument ..."
 for argv in $(cat /proc/cmdline); do
   case "$argv" in
-  init=*)
-    init="${argv#init=}"
+  modules=*)
+    modules="${argv#modules=}"
     ;;
   root=*)
     root="${argv#root=}"
     ;;
-  modules=*)
-    modules="${argv#modules=}"
+  rootdelay=*)
+    rootdelay="${argv#rootdelay=}"
+    case "$rootdelay" in
+    *[![:digit:].]*)
+      "rootdelay"=
+      ;;
+    esac
+    ;;
+  init=*)
+    init="${argv#init=}"
     ;;
   esac
 done
+
+$info"Loading kernel modules ..."
+for module in ${modules//,/ }; do
+  modprobe "$module" || true
+done
+
+$info"Creating device files ..."
+if mount -t devtmpfs -o size=10M,mode=0755 udev /mnt; then
+  cp -rdRf /mnt/. /dev
+  umount /mnt
+fi
 
 if [ -n "$root" ] && [ -z "${root##0x*}" ]; then
   root_major=$(($root / 256))
@@ -67,10 +81,9 @@ if [ -n "$root" ] && [ -z "${root##0x*}" ]; then
   root="/dev/root"
 fi
 
-$info"Loading kernel modules ..."
-for module in ${modules//,/ }; do
-  modprobe "$module" || true
-done
+if [ -n "$rootdelay" ]; then
+  sleep "$rootdelay"
+fi
 
 if [ -n "$root" ]; then
   $info"Mounting $root ..."

@@ -164,7 +164,7 @@ $(INITRD_STAMP): $(BUILDDIR_STAMP) $(ROOTFS_STAMP)
 	  --fsys-tarfile $(ROOTFS)/var/cache/apt/archives/busybox-static_*.deb \
 	  |tar xfC - $(INITRD) ./bin/busybox \
 	  ;
-	for c in sh cp rm mkdir sed mknod mount modprobe insmod switch_root; do \
+	for c in sh cp rm mkdir sed sleep mknod mount modprobe insmod switch_root; do \
 	  ln -s busybox $(INITRD)/bin/$$c; \
 	done
 	dpkg-deb \
