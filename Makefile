@@ -17,7 +17,11 @@ localstatedir=	$(prefix)/var
 var=		$(localstatedir)
 initddir=	$(prefix)/etc/init.d
 
-include Makefile.config
+ifndef CONFIG
+  CONFIG=	debian
+endif
+
+include $(CONFIG).config
 
 ifeq ($(DEB_ARCH), armhf)
   DEB_KERNEL_FLAVOR:=	vexpress
@@ -100,6 +104,7 @@ include $(SOURCE_DIR)/build/Makefile.common
 ## ======================================================================
 
 $(BUILDDIR_STAMP):
+	rm -rf $(BUILDDIR)
 	mkdir $(BUILDDIR)
 	touch $@
 
