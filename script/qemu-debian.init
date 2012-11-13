@@ -62,6 +62,6 @@ append="${init:+init=$init }$append"
   ${kernel:+-kernel "$kernel"} \
   ${initrd:+-initrd "$initrd"} \
   ${append:+-append "$append"} \
-  $qemu_options \
+  $qemu_opts \
   ;
 
