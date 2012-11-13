@@ -40,7 +40,7 @@ ifndef DEB_INCLUDE
   DEB_INCLUDE:=		dpkg ## dpkg is dummy
 endif
 ifndef DEB_EXCLUDE
-  DEB_EXCLUDE:=		_dummy_
+  DEB_EXCLUDE:=		tasksel,tasksel-data ## or __dummy__
 endif
 ifndef DEB_TIMEZONE
   DEB_TIMEZONE:=	$(shell cat /etc/timezone)
