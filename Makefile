@@ -226,3 +226,19 @@ $(SCREENRC): script/screenrc
 	$(SUBST) script/screenrc >$@.tmp
 	mv $@.tmp $@
 
+## ======================================================================
+
+install: build
+	mkdir -p -m 0755 $(DESTDIR)$(initddir)
+	cp $(INIT) $(DESTDIR)$(initddir)/qemu-debian-$(DEB_HOSTNAME)
+	mkdir -p -m 0755 $(DESTDIR)$(sysconfdir)/default
+	cp $(INIT_DEFAULT) $(DESTDIR)$(sysconfdir)/default/qemu-debian-$(DEB_HOSTNAME)
+	mkdir -p -m 0755 $(DESTDIR)$(var)/lib/qemu-debian/$(DEB_HOSTNAME)
+	cp \
+	  $(KERNEL_IMAGE) \
+	  $(INITRD_IMAGE) \
+	  $(ROOTFS_IMAGE) \
+	  $(SCREENRC) \
+	  $(DESTDIR)$(var)/lib/qemu-debian/$(DEB_HOSTNAME)/ \
+	  ;
+
