@@ -32,6 +32,7 @@ kernel="${QEMU_DEBIAN_KERNEL:-${KERNEL-$qemu_env/vmlinuz}}"
 initrd="${QEMU_DEBIAN_INITRD:-${INITRD-$qemu_env/initrd.img}}"
 append="${QEMU_DEBIAN_APPEND:-${APPEND-}}"
 console="${QEMU_DEBIAN_CONSOLE:-${CONSOLE-}}"
+serial="${QEMU_DEBIAN_INITRD:-${INITRD-$qemu_env/serial}}"
 root_fs="${QEMU_DEBIAN_ROOT_FS:-${ROOT_FS-$qemu_env/rootfs.raw}}"
 init="${QEMU_DEBIAN_INIT:-${INIT-}}"
 
@@ -99,6 +100,17 @@ sv_start()
   [ -f "$screen_log" ] && mv "$screen_log" "$screen_log.old"
   date '+%Y-%m-%d %H:%M:%S' >"$screen_log"
 
+  if [ -n "$serial" ]; then
+    if [ ! -p "$serial.in" ]; then
+      rm -f "$serial.in"
+      mkfifo -m 0660 "$serial.in"
+    fi
+    if [ ! -p "$serial.out" ]; then
+      rm -f "$serial.out"
+      mkfifo -m 0660 "$serial.out"
+    fi
+  fi
+
   env \
     QEMU_DEBIAN_SCREEN_LOG="$screen_log" \
   screen \
@@ -109,6 +121,8 @@ sv_start()
   "$qemu_system" \
     -pidfile "$qemu_pid_file" \
     -nographic \
+    -serial mon:stdio \
+    ${serial:+-serial "pipe:$serial"} \
     ${machine:+-machine "$machine"} \
     ${cpu:+-cpu "$cpu"} \
     ${memory:+-m "$memory"} \
