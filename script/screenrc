@@ -1,0 +1,6 @@
+escape ^z^z
+defencoding UTF-8
+hardstatus alwayslastline "%t on %H (Type Enter, Ctrl-z, 'd' sequence to detach)"
+logfile ${QEMU_DEBIAN_SCREEN_LOG}
+logfile flush 1
+
