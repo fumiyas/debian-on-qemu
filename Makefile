@@ -57,7 +57,7 @@ BUILD_STAMP=	$(BUILDDIR)/build.stamp
 
 ROOTFS=		$(BUILDDIR)/rootfs
 ROOTFS_STAMP=	$(ROOTFS).stamp
-ROOTFS_IMAGE=	$(BUILDDIR)/rootfs.raw
+ROOTFS_IMAGE=	$(BUILDDIR)/rootfs.img
 
 KERNEL_IMAGE=	$(BUILDDIR)/vmlinuz
 

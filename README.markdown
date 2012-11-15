@@ -36,7 +36,7 @@ To build
   1. Confirm you can get root privileges via sudo
   2. Edit debian.config
   3. Run `make`
-  4. See files `vmlinuz`, `initrd.img`, `rootfs.raw` in
+  4. See files `vmlinuz`, `initrd.img`, `rootfs.img` in
      directory `$(DEB_HOSTNAME)`
   5. Run `sudo make install`
   6. Run `/usr/local/etc/init.d/qemu-* start`
@@ -48,7 +48,7 @@ TODO
 ----------------------------------------------------------------------
 
   * Avoid root privleges (sudo) on build
-  * Replace initrd.img by /boot/initrd.img in rootfs.raw
+  * Replace initrd.img by /boot/initrd.img in rootfs.img
   * Setup more OS config:
     * Network
     * Generate locale data (locale-gen(8), /etc/locale.gen)

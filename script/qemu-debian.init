@@ -33,7 +33,7 @@ initrd="${QEMU_DEBIAN_INITRD:-${INITRD-$qemu_env/initrd.img}}"
 append="${QEMU_DEBIAN_APPEND:-${APPEND-}}"
 console="${QEMU_DEBIAN_CONSOLE:-${CONSOLE-}}"
 serial="${QEMU_DEBIAN_SERIAL:-${SERIAL-$qemu_env/serial}}"
-root_fs="${QEMU_DEBIAN_ROOT_FS:-${ROOT_FS-$qemu_env/rootfs.raw}}"
+root_fs="${QEMU_DEBIAN_ROOT_FS:-${ROOT_FS-$qemu_env/rootfs.img}}"
 init="${QEMU_DEBIAN_INIT:-${INIT-}}"
 
 qemu_opts="${QEMU_DEBIAN_QEMU_OPTIONS:-${QEMU_OPTIONS-}}"
