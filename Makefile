@@ -129,6 +129,7 @@ $(ROOTFS_IMAGE): $(BUILDDIR_STAMP) $(ROOTFS_STAMP)
 	mv $@.tmp $@
 
 $(ROOTFS_STAMP): $(BUILDDIR_STAMP) $(DEBOOTSTRAP_TAR) script/debootstrap.2nd.sh
+	: >$(FAKEROOT_ENV)
 	rm -rf $(ROOTFS)
 	$(FAKEROOT) \
 	  $(DEBOOTSTRAP) \
@@ -148,7 +149,6 @@ $(ROOTFS_STAMP): $(BUILDDIR_STAMP) $(DEBOOTSTRAP_TAR) script/debootstrap.2nd.sh
 	touch $@
 
 $(DEBOOTSTRAP_TAR): $(BUILDDIR_STAMP)
-	: >$(FAKEROOT_ENV)
 	$(FAKEROOT) \
 	  $(DEBOOTSTRAP) \
 	    --arch $(DEB_ARCH) \
