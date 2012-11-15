@@ -23,7 +23,7 @@ $info"Start"
 mount -o remount,rw /
 
 hostname '@HOSTNAME@'
-cp /proc/mounts /etc/mtab
+cp /proc/mounts /etc/mtab.tmp
 
 /debootstrap/debootstrap --second-stage
 
@@ -48,9 +48,11 @@ echo 'root:root' |chpasswd
 ## FIXME
 #sed -i 's/^UTC$/LOCAL/' /etc/adjtime
 
-mount -o remount,ro /
+mv /etc/mtab.tmp /etc/mtab
 
 $info"End"
 
-reboot -f -d
+## Remount / read-only by an exec-ed shell to close removed $0
+## before remount, then force to reboot the system
+exec /bin/sh -c "mount -n -o remount,ro /; reboot -f -d"
 

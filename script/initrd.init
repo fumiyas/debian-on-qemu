@@ -97,10 +97,10 @@ if [ -n "$root" ]; then
   fi
 
   $info"Switching root filesystem to $root and exec $init ..."
+  mount -n -o move /dev /root/dev
   mount -n -o move /sys /root/sys
   mount -n -o move /proc /root/proc
-  mount -n -o move /dev /root/dev
-  exec switch_root /root "$init"
+  exec switch_root /root "$init" </root/dev/console >/root/dev/console
 fi
 
 $warning"No root filesystem device specified"

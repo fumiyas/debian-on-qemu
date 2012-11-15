@@ -163,23 +163,14 @@ $(BUILD_STAMP): $(BUILDDIR_STAMP) \
   $(KERNEL_IMAGE) $(INITRD_IMAGE) $(ROOTFS_IMAGE) \
   $(INIT) $(INIT_DEFAULT) $(SCREENRC)
 	env \
+	  TERM=vt100 \
 	  QEMU_DEBIAN_INIT=/debootstrap/debootstrap.2nd \
 	  QEMU_DEBIAN_VAR_DIR=. \
-	  $(INIT) start
-	tail -f -n +1 $(BUILDDIR)/screen.log \
-	  |while IFS= read -r line; do \
-	  echo "debootstrap.2nd:$$line"; \
-	    if [ "$${line%:*}" = "$(DEB_HOSTNAME) login" ]; then \
-	      pkill --parent $$$$ tail; \
-	      break; \
-	    fi; \
-	  done
-	@echo "debootstrap.2nd completed"; echo
-	@echo "NOTE: Login user 'root' with password 'root' and exit by 'poweroff'!"
-	@echo
-	@env \
-	  QEMU_DEBIAN_VAR_DIR=. \
-	  $(INIT) attach
+	  QEMU_DEBIAN_QEMU_OPTIONS='-no-reboot' \
+	  $(INIT) start-attach
+	@tail -n 10 sugar-wheezy-armhf/screen.log \
+	  |grep -q '/debootstrap.2nd:: INFO ::End[^a-zA-Z]' \
+	  || { echo 'debootstrap.2nd failed' 1>&2; exit 1; }
 	touch $@
 
 ## ======================================================================
