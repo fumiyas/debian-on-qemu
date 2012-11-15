@@ -26,6 +26,7 @@ init="/sbin/init"
 modules="ext4"
 
 $info"Creating basic directory tree in initramfs ..."
+mkdir -p /root
 mkdir -p /dev
 mkdir -p /sys
 mkdir -p /proc
@@ -88,18 +89,18 @@ fi
 
 if [ -n "$root" ]; then
   $info"Mounting $root ..."
-  mount -o ro "$root" /mnt
+  mount -o ro "$root" /root
 
-  if [ ! -x /mnt"$init" ]; then
+  if [ ! -x /root"$init" ]; then
     $error"$init not found in $root"
     exit 1
   fi
 
   $info"Switching root filesystem to $root and exec $init ..."
-  mount -n -o move /sys /mnt/sys
-  mount -n -o move /proc /mnt/proc
-  mount -n -o move /dev /mnt/dev
-  exec switch_root /mnt "$init"
+  mount -n -o move /sys /root/sys
+  mount -n -o move /proc /root/proc
+  mount -n -o move /dev /root/dev
+  exec switch_root /root "$init"
 fi
 
 $warning"No root filesystem device specified"
