@@ -162,7 +162,7 @@ $(DEBOOTSTRAP_TAR): $(BUILDDIR_STAMP)
 $(BUILD_STAMP): $(BUILDDIR_STAMP) \
   $(KERNEL_IMAGE) $(INITRD_IMAGE) $(ROOTFS_IMAGE) \
   $(INIT) $(INIT_DEFAULT) $(SCREENRC)
-	echo env \
+	env \
 	  QEMU_DEBIAN_INIT=/debootstrap/debootstrap.2nd \
 	  QEMU_DEBIAN_VAR_DIR=. \
 	  $(INIT) start
