@@ -32,13 +32,20 @@ mkdir -p /proc
 mkdir -p /tmp
 mkdir -p /mnt
 
-$info"Mounting basic pseudo filesystems ..."
+$info"Mounting pseudo filesystems ..."
 mount -t sysfs -o nodev,noexec,nosuid sysfs /sys
 mount -t proc -o nodev,noexec,nosuid proc /proc
-#mkdir /dev/pts
-#mount -t devpts -o noexec,nosuid,gid=5,mode=0620 devpts /dev/pts || true
 
-$info"Parsing kernel command-line argument ..."
+if ! mount -t devtmpfs -o size=10M,mode=0755 udev /dev; then
+  $warning"devtmpfs not available, falling back to tmpfs for /dev"
+  mount -t tmpfs -o size=10M,mode=0755 udev /dev
+  [ -e /dev/console ] || mknod -m 0600 /dev/console c 5 1
+  [ -e /dev/null ] || mknod /dev/null c 1 3
+fi
+mkdir /dev/pts
+mount -t devpts -o noexec,nosuid,gid=5,mode=0620 devpts /dev/pts || true
+
+$info"Parsing command-line argument ..."
 for argv in $(cat /proc/cmdline); do
   case "$argv" in
   modules=*)
@@ -51,7 +58,7 @@ for argv in $(cat /proc/cmdline); do
     rootdelay="${argv#rootdelay=}"
     case "$rootdelay" in
     *[![:digit:].]*)
-      "rootdelay"=
+      rootdelay=
       ;;
     esac
     ;;
@@ -68,12 +75,6 @@ done
 
 if [ -n "$rootdelay" ]; then
   sleep "$rootdelay"
-fi
-
-$info"Creating device files ..."
-if mount -t devtmpfs -o size=10M,mode=0755 udev /mnt; then
-  cp -rdRf /mnt/. /dev
-  umount /mnt
 fi
 
 if [ -n "$root" ] && [ -z "${root##0x*}" ]; then
@@ -97,6 +98,7 @@ if [ -n "$root" ]; then
   $info"Switching root filesystem to $root and exec $init ..."
   mount -n -o move /sys /mnt/sys
   mount -n -o move /proc /mnt/proc
+  mount -n -o move /dev /mnt/dev
   exec switch_root /mnt "$init"
 fi
 
