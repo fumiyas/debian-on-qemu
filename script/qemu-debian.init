@@ -149,15 +149,15 @@ sv_attach()
 {
   echo "Attaching QEMU for $name via screen session ..."
 
-  local pid
-  pid=$(sv_pid) || exit $?
-  [ -z "$pid" ] && { echo "Not running"; return 1; }
+  #local pid
+  #pid=$(sv_pid) || exit $?
+  #[ -z "$pid" ] && { echo "Not running"; return 1; }
 
-  echo "You can detach from the session by typing the key sequence:"
-  echo "Enter key, Ctrl-z and 'd'"
-  echo
-  echo -n "Type Enter key to continue ..."
-  read
+  #echo "You can detach from the session by typing the key sequence:"
+  #echo "Enter key, Ctrl-z and 'd'"
+  #echo
+  #echo -n "Type Enter key to continue ..."
+  #read
 
   screen -r "$name" -c "$screen_rc"
 }
