@@ -95,6 +95,7 @@ endif
 
 SUBST=	sed \
 	  -e 's|@NAME@|$(DEB_HOSTNAME)|g' \
+	  -e 's|@HOSTNAME@|$(DEB_HOSTNAME)|g' \
 	  -e 's|@ARCH@|$(DEB_ARCH)|g' \
 	  -e 's|@TIMEZONE@|$(DEB_TIMEZONE)|g' \
 	  -e 's|@LANG@|$(DEB_LANG)|g' \
@@ -144,8 +145,6 @@ $(ROOTFS_STAMP): $(BUILDDIR_STAMP) $(DEBOOTSTRAP_TAR) script/debootstrap.2nd.sh
 	  ;
 	$(FAKEROOT) \
 	  chmod +x $(ROOTFS)/debootstrap/debootstrap.2nd
-	echo $(DEB_HOSTNAME) >$(ROOTFS)/etc/hostname
-	echo '$(QEMU_SERIAL_DEVICE)0' >>$(ROOTFS)/etc/securetty
 	touch $@
 
 $(DEBOOTSTRAP_TAR): $(BUILDDIR_STAMP)

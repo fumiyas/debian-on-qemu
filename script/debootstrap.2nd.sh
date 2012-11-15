@@ -32,8 +32,12 @@ if type update-locale >/dev/null 2>&1; then
   update-locale LANG='@LANG@'
 fi
 
+echo '@HOSTNAME@' >/etc/hostname
 echo '@TIMEZONE@' >/etc/timezone
 echo 'T0:23:respawn:/sbin/getty -L @SERIAL_DEVICE@0 115200 vt100' >>/etc/inittab
+if ! grep -q '^@SERIAL_DEVICE@0$'; then
+  echo '@SERIAL_DEVICE@0' >>/etc/securetty
+fi
 echo 'root:root' |chpasswd
 
 ## FIXME
