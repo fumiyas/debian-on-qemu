@@ -18,7 +18,12 @@ warning=": WARNING ::"
 trap '$error"mount -o remount,ro; Fallback to /bin/sh"; exec /bin/sh' EXIT
 set -x
 
+$info"Start"
+
 mount -o remount,rw /
+
+hostname '@HOSTNAME@'
+cp /proc/mounts /etc/mtab
 
 /debootstrap/debootstrap --second-stage
 
@@ -43,5 +48,9 @@ echo 'root:root' |chpasswd
 ## FIXME
 #sed -i 's/^UTC$/LOCAL/' /etc/adjtime
 
-exec /sbin/init
+mount -o remount,ro /
+
+$info"End"
+
+reboot -f -d
 
