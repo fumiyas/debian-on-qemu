@@ -175,6 +175,10 @@ stop)
 attach)
   sv_attach || exit $?
   ;;
+start-attach)
+  sv_start || exit $?
+  sv_attach || exit $?
+  ;;
 pid)
   sv_pid || exit $?
   ;;
