@@ -32,7 +32,7 @@ kernel="${QEMU_DEBIAN_KERNEL:-${KERNEL-$qemu_env/vmlinuz}}"
 initrd="${QEMU_DEBIAN_INITRD:-${INITRD-$qemu_env/initrd.img}}"
 append="${QEMU_DEBIAN_APPEND:-${APPEND-}}"
 console="${QEMU_DEBIAN_CONSOLE:-${CONSOLE-}}"
-serial="${QEMU_DEBIAN_SERIAL:-${SERIAL-$qemu_env/serial}}"
+control="${QEMU_DEBIAN_CONTROL:-${CONTROL-$qemu_env/control}}"
 root_fs="${QEMU_DEBIAN_ROOT_FS:-${ROOT_FS-$qemu_env/rootfs.img}}"
 init="${QEMU_DEBIAN_INIT:-${INIT-}}"
 
@@ -76,7 +76,7 @@ sv_pid()
   [ -f "$qemu_pid_file" ] || return 0
 
   local qemu_pid pid
-  qemu_pid=$(cat "$qemu_pid_file") || exit 1
+  qemu_pid=$(cat "$qemu_pid_file") || return 1
   for pid in $(pidof "$qemu_system"); do
     if [ x"$qemu_pid" = x"$pid" ]; then
       echo "$qemu_pid"
@@ -94,20 +94,20 @@ sv_start()
   echo "Starting QEMU for $name ..."
 
   local pid
-  pid=$(sv_pid) || exit $?
+  pid=$(sv_pid) || return $?
   [ -n "$pid" ] && { echo "Already running"; return 1; }
 
   [ -f "$screen_log" ] && mv "$screen_log" "$screen_log.old"
   date '+%Y-%m-%d %H:%M:%S' >"$screen_log"
 
-  if [ -n "$serial" ]; then
-    if [ ! -p "$serial.in" ]; then
-      rm -f "$serial.in"
-      mkfifo -m 0660 "$serial.in"
+  if [ -n "$control" ]; then
+    if [ ! -p "$control.in" ]; then
+      rm -f "$control.in"
+      mkfifo -m 0660 "$control.in"
     fi
-    if [ ! -p "$serial.out" ]; then
-      rm -f "$serial.out"
-      mkfifo -m 0660 "$serial.out"
+    if [ ! -p "$control.out" ]; then
+      rm -f "$control.out"
+      mkfifo -m 0660 "$control.out"
     fi
   fi
 
@@ -122,7 +122,7 @@ sv_start()
     -pidfile "$qemu_pid_file" \
     -nographic \
     -serial mon:stdio \
-    ${serial:+-serial "pipe:$serial"} \
+    -serial "pipe:$control" \
     ${machine:+-machine "$machine"} \
     ${cpu:+-cpu "$cpu"} \
     ${memory:+-m "$memory"} \
@@ -141,17 +141,23 @@ sv_start()
 
 sv_stop()
 {
-  echo "Cannot stop (not implemented)"
-  return 1
+  local pid
+  pid=$(sv_pid) || return $?
+  [ -z "$pid" ] && { echo "Not running"; return 1; }
+
+  echo "Stopping QEMU for $name ..."
+  echo 'RUN_SHELL poweroff' >"$control.in"
+
+  TERM=vt100 screen -r "$name" -c "$screen_rc" || return 1
+
+  echo "QEMU for $name stopped."
+
+  return 0
 }
 
 sv_attach()
 {
   echo "Attaching QEMU for $name via screen session ..."
-
-  #local pid
-  #pid=$(sv_pid) || exit $?
-  #[ -z "$pid" ] && { echo "Not running"; return 1; }
 
   #echo "You can detach from the session by typing the key sequence:"
   #echo "Enter key, Ctrl-z and 'd'"

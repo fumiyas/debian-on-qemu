@@ -23,6 +23,7 @@ $info"Start"
 mount -o remount,rw /
 
 hostname '@HOSTNAME@'
+cp /proc/mounts /etc/mtab
 cp /proc/mounts /etc/mtab.tmp
 
 /debootstrap/debootstrap --second-stage
@@ -39,11 +40,14 @@ fi
 
 echo '@HOSTNAME@' >/etc/hostname
 echo '@TIMEZONE@' >/etc/timezone
+echo 'root:root' |chpasswd
+
 echo 'T0:23:respawn:/sbin/getty -L @SERIAL_DEVICE@0 115200 vt100' >>/etc/inittab
 if ! grep -q '^@SERIAL_DEVICE@0$' /etc/securetty; then
   echo '@SERIAL_DEVICE@0' >>/etc/securetty
 fi
-echo 'root:root' |chpasswd
+
+echo 'T1:0123456:respawn:/opt/debian-qemu/sbin/qemu-debian-control </dev/@SERIAL_DEVICE@1 >/dev/@SERIAL_DEVICE@1' >>/etc/inittab
 
 ## FIXME
 #sed -i 's/^UTC$/LOCAL/' /etc/adjtime

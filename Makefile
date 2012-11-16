@@ -128,7 +128,10 @@ $(ROOTFS_IMAGE): $(BUILDDIR_STAMP) $(ROOTFS_STAMP)
 	)
 	mv $@.tmp $@
 
-$(ROOTFS_STAMP): $(BUILDDIR_STAMP) $(DEBOOTSTRAP_TAR) script/debootstrap.2nd.sh
+$(ROOTFS_STAMP): $(BUILDDIR_STAMP) \
+  $(DEBOOTSTRAP_TAR) \
+  script/debootstrap.2nd.sh \
+  script/qemu-debian-control.sh
 	: >$(FAKEROOT_ENV)
 	rm -rf $(ROOTFS)
 	$(FAKEROOT) \
@@ -146,6 +149,15 @@ $(ROOTFS_STAMP): $(BUILDDIR_STAMP) $(DEBOOTSTRAP_TAR) script/debootstrap.2nd.sh
 	  ;
 	$(FAKEROOT) \
 	  chmod +x $(ROOTFS)/debootstrap/debootstrap.2nd
+	$(FAKEROOT) \
+	  mkdir -p -m 0755 $(ROOTFS)/opt/debian-qemu/sbin
+	$(FAKEROOT) \
+	  $(SUBST) \
+	    script/qemu-debian-control.sh \
+	    >$(ROOTFS)/opt/debian-qemu/sbin/qemu-debian-control \
+	  ;
+	$(FAKEROOT) \
+	  chmod +x $(ROOTFS)/opt/debian-qemu/sbin/qemu-debian-control
 	touch $@
 
 $(DEBOOTSTRAP_TAR): $(BUILDDIR_STAMP)
