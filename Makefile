@@ -180,8 +180,8 @@ $(BUILD_STAMP): $(BUILDDIR_STAMP) \
 	  QEMU_DEBIAN_VAR_DIR=. \
 	  QEMU_DEBIAN_QEMU_OPTIONS='-no-reboot' \
 	  $(INIT) start-attach
-	@tail -n 10 sugar-wheezy-armhf/screen.log \
-	  |grep -q '/debootstrap.2nd:: INFO ::End[^a-zA-Z]' \
+	@tail -n 10 $(BUILDDIR)/screen.log \
+	  |grep -q '/debootstrap.2nd:: INFO ::End' \
 	  || { echo 'debootstrap.2nd failed' 1>&2; exit 1; }
 	touch $@
 
