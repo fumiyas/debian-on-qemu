@@ -102,6 +102,8 @@ SUBST=	sed \
 	  -e 's|@SERIAL_DEVICE@|$(QEMU_SERIAL_DEVICE)|g' \
 	  -e 's|@SYSCONFDIR@|$(sysconfdir)|g' \
 	  -e 's|@VAR@|$(var)|g' \
+	  -e 's|@DEB_MIRROR@|$(DEB_MIRROR)|g' \
+	  -e 's|@DEB_CODENAME@|$(DEB_CODENAME)|g' \
 	  ##
 
 include $(SOURCE_DIR)/build/Makefile.common

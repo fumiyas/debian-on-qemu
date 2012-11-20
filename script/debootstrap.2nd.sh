@@ -52,6 +52,9 @@ echo 'T1:0123456:respawn:/opt/debian-qemu/sbin/qemu-debian-control </dev/@SERIAL
 ## FIXME
 #sed -i 's/^UTC$/LOCAL/' /etc/adjtime
 
+echo 'deb @DEB_MIRROR@ @DEB_CODENAME@ main non-free contrib' >>/etc/apt/sources.list
+echo 'Acquire::Languages "en";' >>/etc/apt/apt.conf
+
 mv /etc/mtab.tmp /etc/mtab
 
 $info"End"
