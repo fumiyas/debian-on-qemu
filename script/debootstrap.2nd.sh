@@ -40,6 +40,7 @@ fi
 
 echo '@HOSTNAME@' >/etc/hostname
 echo '@TIMEZONE@' >/etc/timezone
+cp -p '/usr/share/zoneinfo/@TIMEZONE@' /etc/localtime
 echo 'root:root' |chpasswd
 
 echo 'T0:23:respawn:/sbin/getty -L @SERIAL_DEVICE@0 115200 vt100' >>/etc/inittab
