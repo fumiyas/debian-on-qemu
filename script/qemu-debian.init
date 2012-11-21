@@ -111,6 +111,8 @@ sv_start()
     fi
   fi
 
+  local macaddr=$(printf %012x $(((($(date +%s) & 0xFFFFFFFF) << 16) | ($$ & 0xFFFF) | 0x020000000000)) |sed 's/\(..\)/\1:/g;s/:$//')
+
   env \
     QEMU_DEBIAN_SCREEN_LOG="$screen_log" \
   screen \
@@ -121,12 +123,13 @@ sv_start()
   "$qemu_system" \
     -pidfile "$qemu_pid_file" \
     -nographic \
-    -serial mon:stdio \
-    -serial "pipe:$control" \
     ${machine:+-machine "$machine"} \
     ${cpu:+-cpu "$cpu"} \
     ${memory:+-m "$memory"} \
     ${keyboard_lang:+-k "$keyboard_lang"} \
+    -serial mon:stdio \
+    -serial "pipe:$control" \
+    -net nic,macaddr="$macaddr" \
     ${root_fs:+"$qemu_storage_option" "$root_fs"} \
     ${kernel:+-kernel "$kernel"} \
     ${initrd:+-initrd "$initrd"} \
